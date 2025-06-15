@@ -1,0 +1,1 @@
+step,epoch,loss,learning_rate,gradient_norm,validation_loss,validation_perplexity

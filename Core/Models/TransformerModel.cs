@@ -12,7 +12,7 @@ namespace Core.Models;
 /// GPT-style transformer language model implementation
 /// This is the main class that orchestrates all the layers
 /// </summary>
-public sealed class TransformerModel : ILanguageModel
+public sealed partial class TransformerModel : ILanguageModel
 {
     private ModelConfiguration? _config;
     private EmbeddingLayer? _tokenEmbedding;

@@ -1,8 +1,8 @@
 ﻿using Core.Abstractions;
 using Core.Mathematics;
-using DataPipeline.Tokenization;
-using DataPipeline.Loading;
-using DataPipeline.Abstractions;
+using Infrastructure.Tokenization;
+using Infrastructure.Loading;
+using Infrastructure.Abstractions;
 
 namespace ConsoleApp;
 public static class Examples
