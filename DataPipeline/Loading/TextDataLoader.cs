@@ -10,14 +10,9 @@ namespace DataPipeline.Loading;
 /// <summary>
 /// Loads text files and converts them into tokenized datasets
 /// </summary>
-public sealed class TextDataLoader
+public sealed class TextDataLoader(TextPreprocessor? preprocessor = null)
 {
-    private readonly TextPreprocessor _preprocessor;
-
-    public TextDataLoader(TextPreprocessor? preprocessor = null)
-    {
-        _preprocessor = preprocessor ?? new TextPreprocessor();
-    }
+    private readonly TextPreprocessor _preprocessor = preprocessor ?? new TextPreprocessor();
 
     /// <summary>
     /// Load a text file and create a tokenized dataset

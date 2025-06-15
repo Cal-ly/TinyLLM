@@ -33,7 +33,7 @@ public static class BatchGenerator
         if (sequenceLength <= 0)
             throw new ArgumentException("Sequence length must be positive", nameof(sequenceLength));
 
-        var tokens = dataset.GetTokens();
+        var tokens = dataset.GetTokens().ToArray(); // Convert ReadOnlySpan<int> to an array
         if (tokens.Length < (sequenceLength + 1))
             throw new ArgumentException($"Dataset too small: {tokens.Length} tokens, need at least {sequenceLength + 1}");
 

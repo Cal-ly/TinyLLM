@@ -7,7 +7,7 @@ try
     Examples.AddSeperatorsToConsole();
     Examples.RunMathExample();
     Examples.AddSeperatorsToConsole();
-    Examples.RunTokenizerExample();
+    // Examples.RunTokenizerExample();
     Console.WriteLine(new string('=', 25));
     Console.WriteLine("All examples completed successfully. Press key to end program");
     Console.ReadKey();

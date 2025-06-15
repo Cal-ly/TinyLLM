@@ -5,24 +5,13 @@ namespace DataPipeline.Loading;
 /// <summary>
 /// Represents a tokenized text dataset ready for training
 /// </summary>
-public sealed class TextDataset
+public sealed class TextDataset(
+    int[] tokens,
+    ITokenizer tokenizer,
+    string sourceFile,
+    DatasetMetadata metadata)
 {
-    private readonly int[] _tokens;
-    private readonly ITokenizer _tokenizer;
-    private readonly string _sourceFile;
-    private readonly DatasetMetadata _metadata;
-
-    public TextDataset(
-        int[] tokens,
-        ITokenizer tokenizer,
-        string sourceFile,
-        DatasetMetadata metadata)
-    {
-        _tokens = tokens ?? throw new ArgumentNullException(nameof(tokens));
-        _tokenizer = tokenizer ?? throw new ArgumentNullException(nameof(tokenizer));
-        _sourceFile = sourceFile ?? throw new ArgumentNullException(nameof(sourceFile));
-        _metadata = metadata ?? throw new ArgumentNullException(nameof(metadata));
-    }
+    private readonly int[] _tokens = tokens ?? throw new ArgumentNullException(nameof(tokens));
 
     /// <summary>
     /// Total number of tokens in the dataset
@@ -32,17 +21,17 @@ public sealed class TextDataset
     /// <summary>
     /// The tokenizer used to create this dataset
     /// </summary>
-    public ITokenizer Tokenizer => _tokenizer;
+    public ITokenizer Tokenizer { get; } = tokenizer ?? throw new ArgumentNullException(nameof(tokenizer));
 
     /// <summary>
     /// Source file path
     /// </summary>
-    public string SourceFile => _sourceFile;
+    public string SourceFile { get; } = sourceFile ?? throw new ArgumentNullException(nameof(sourceFile));
 
     /// <summary>
     /// Metadata about the dataset
     /// </summary>
-    public DatasetMetadata Metadata => _metadata;
+    public DatasetMetadata Metadata { get; } = metadata ?? throw new ArgumentNullException(nameof(metadata));
 
     /// <summary>
     /// Get all tokens as a read-only span
@@ -109,8 +98,8 @@ public sealed class TextDataset
             throw new ArgumentOutOfRangeException(nameof(start));
 
         var actualLength = Math.Min(length, _tokens.Length - start);
-        var sample = GetTokens(start, actualLength);
-        return _tokenizer.Decode(sample);
+        var sample = GetTokens(start, actualLength).ToArray(); // Convert ReadOnlySpan<int> to IEnumerable<int>
+        return Tokenizer.Decode(sample);
     }
 
     /// <summary>
@@ -123,7 +112,7 @@ public sealed class TextDataset
             return new DatasetStatistics(
                 TotalTokens: 0,
                 UniqueTokens: 0,
-                VocabularySize: _tokenizer.VocabularySize,
+                VocabularySize: Tokenizer.VocabularySize,
                 MostFrequentTokens: Array.Empty<(int TokenId, int Count)>(),
                 TokenFrequencies: new Dictionary<int, int>()
             );
@@ -145,7 +134,7 @@ public sealed class TextDataset
         return new DatasetStatistics(
             TotalTokens: _tokens.Length,
             UniqueTokens: frequencies.Count,
-            VocabularySize: _tokenizer.VocabularySize,
+            VocabularySize: Tokenizer.VocabularySize,
             MostFrequentTokens: mostFrequent,
             TokenFrequencies: frequencies
         );

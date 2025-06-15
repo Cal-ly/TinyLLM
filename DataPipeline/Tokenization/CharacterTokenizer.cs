@@ -174,14 +174,17 @@ public sealed class CharacterTokenizer : ITokenizer
             if (!_isFitted)
                 throw new InvalidOperationException("Tokenizer must be fitted before decoding");
 
-            if (tokens == null || !tokens.Any())
+            if (tokens?.Any() != true)
                 return string.Empty;
 
             var chars = tokens.Select(tokenId =>
             {
                 if (!_tokenToChar.TryGetValue(tokenId, out char character))
+                {
                     throw new ArgumentException($"Unknown token ID: {tokenId}. " +
                                                 "Valid token IDs range from 0 to {VocabularySize - 1}.");
+                }
+
                 return character;
             }).ToArray();
 
