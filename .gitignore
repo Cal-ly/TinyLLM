@@ -361,3 +361,6 @@ MigrationBackup/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
+
+# Subfolder containing metrics in "\TinyLLM\Models\shakespeare"
+Models/shakespeare/
