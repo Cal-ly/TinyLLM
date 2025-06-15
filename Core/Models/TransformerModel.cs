@@ -156,16 +156,19 @@ public sealed class TransformerModel : ILanguageModel
         // Backward through transformer blocks (in reverse order)
         for (int i = _config.NumLayers - 1; i >= 0; i--)
         {
-            var blockGrads = _transformerBlocks[i].Backward(currentGrad);
+            var blockGrads = _transformerBlocks[i].BackwardDetailed(currentGrad);
 
             // Collect gradients with layer-specific names
             var layerPrefix = $"layer_{i}";
             foreach (var (name, grad) in blockGrads)
             {
+                if (name == "input_gradients")
+                    continue;
+
                 gradients.Add($"{layerPrefix}_{name}", grad);
             }
 
-            currentGrad = blockGrads["input_gradients"];
+            currentGrad = blockGrads["input_gradients"].Unflatten(seqLength, _config.EmbeddingDim);
         }
 
         // Backward through positional embeddings (just pass through)

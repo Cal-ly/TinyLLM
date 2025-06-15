@@ -30,4 +30,43 @@ public static class TensorExtensions
 
         return result;
     }
+
+    /// <summary>
+    /// Flatten a 2D matrix into a 1D array in row-major order
+    /// </summary>
+    public static float[] Flatten(this float[,] matrix)
+    {
+        int rows = matrix.GetLength(0);
+        int cols = matrix.GetLength(1);
+        var result = new float[rows * cols];
+        int index = 0;
+        for (int i = 0; i < rows; i++)
+        {
+            for (int j = 0; j < cols; j++)
+            {
+                result[index++] = matrix[i, j];
+            }
+        }
+        return result;
+    }
+
+    /// <summary>
+    /// Convert a flattened array back into a 2D matrix
+    /// </summary>
+    public static float[,] Unflatten(this float[] data, int rows, int cols)
+    {
+        if (data.Length != rows * cols)
+            throw new ArgumentException($"Array length {data.Length} does not match dimensions [{rows}, {cols}]");
+
+        var result = new float[rows, cols];
+        int index = 0;
+        for (int i = 0; i < rows; i++)
+        {
+            for (int j = 0; j < cols; j++)
+            {
+                result[i, j] = data[index++];
+            }
+        }
+        return result;
+    }
 }

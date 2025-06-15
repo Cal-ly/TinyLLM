@@ -16,7 +16,8 @@ public sealed class CharacterTokenizer : ITokenizer
 {
     private readonly Dictionary<char, int> _charToToken = new();
     private readonly Dictionary<int, char> _tokenToChar = new();
-    private readonly Lock _lock = new();
+    // Use a simple object for locking as the standard Monitor lock target
+    private readonly object _lock = new();
     private bool _isFitted = false;
 
     /// <summary>
