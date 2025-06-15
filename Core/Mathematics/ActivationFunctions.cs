@@ -50,7 +50,7 @@ public static class ActivationFunctions
         {
             float x = input[i];
             float x3 = x * x * x;
-            float inner = sqrt2OverPi * (x + coeff * x3);
+            float inner = sqrt2OverPi * (x + (coeff * x3));
             output[i] = 0.5f * x * (1f + MathF.Tanh(inner));
         }
     }
@@ -72,12 +72,12 @@ public static class ActivationFunctions
             float x2 = x * x;
             float x3 = x2 * x;
 
-            float inner = sqrt2OverPi * (x + coeff * x3);
+            float inner = sqrt2OverPi * (x + (coeff * x3));
             float tanh_inner = MathF.Tanh(inner);
-            float sech2_inner = 1f - tanh_inner * tanh_inner; // sech²(x) = 1 - tanh²(x)
+            float sech2_inner = 1f - (tanh_inner * tanh_inner); // sech²(x) = 1 - tanh²(x)
 
             float gelu_part = 0.5f * (1f + tanh_inner);
-            float derivative_part = 0.5f * x * sqrt2OverPi * (1f + 3f * coeff * x2) * sech2_inner;
+            float derivative_part = 0.5f * x * sqrt2OverPi * (1f + (3f * coeff * x2)) * sech2_inner;
 
             output[i] = gelu_part + derivative_part;
         }
@@ -108,7 +108,7 @@ public static class ActivationFunctions
         for (int i = 0; i < input.Length; i++)
         {
             float tanh_x = MathF.Tanh(input[i]);
-            output[i] = 1f - tanh_x * tanh_x;
+            output[i] = 1f - (tanh_x * tanh_x);
         }
     }
 

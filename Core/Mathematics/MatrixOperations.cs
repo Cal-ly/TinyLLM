@@ -18,11 +18,11 @@ public static class MatrixOperations
         ReadOnlySpan<float> a, ReadOnlySpan<float> b, Span<float> result,
         int aRows, int aCols, int bCols)
     {
-        if (a.Length != aRows * aCols)
+        if (a.Length != (aRows * aCols))
             throw new ArgumentException($"Matrix A size mismatch: expected {aRows * aCols}, got {a.Length}");
-        if (b.Length != aCols * bCols)
+        if (b.Length != (aCols * bCols))
             throw new ArgumentException($"Matrix B size mismatch: expected {aCols * bCols}, got {b.Length}");
-        if (result.Length != aRows * bCols)
+        if (result.Length != (aRows * bCols))
             throw new ArgumentException($"Result matrix size mismatch: expected {aRows * bCols}, got {result.Length}");
 
         // Standard matrix multiplication with loop tiling for cache efficiency
@@ -45,12 +45,12 @@ public static class MatrixOperations
                             float sum = 0f;
                             for (int k = kk; k < kMax; k++)
                             {
-                                sum += a[i * aCols + k] * b[k * bCols + j];
+                                sum += a[(i * aCols) + k] * b[(k * bCols) + j];
                             }
                             if (kk == 0)
-                                result[i * bCols + j] = sum;
+                                result[(i * bCols) + j] = sum;
                             else
-                                result[i * bCols + j] += sum;
+                                result[(i * bCols) + j] += sum;
                         }
                     }
                 }
@@ -78,7 +78,7 @@ public static class MatrixOperations
             float sum = 0f;
             for (int j = 0; j < cols; j++)
             {
-                sum += matrix[i * cols + j] * vector[j];
+                sum += matrix[(i * cols) + j] * vector[j];
             }
             result[i] = sum;
         }
@@ -92,16 +92,16 @@ public static class MatrixOperations
         ReadOnlySpan<float> input, Span<float> output,
         int rows, int cols)
     {
-        if (input.Length != rows * cols)
+        if (input.Length != (rows * cols))
             throw new ArgumentException("Input matrix size mismatch");
-        if (output.Length != rows * cols)
+        if (output.Length != (rows * cols))
             throw new ArgumentException("Output matrix size mismatch");
 
         for (int i = 0; i < rows; i++)
         {
             for (int j = 0; j < cols; j++)
             {
-                output[j * rows + i] = input[i * cols + j];
+                output[(j * rows) + i] = input[(i * cols) + j];
             }
         }
     }

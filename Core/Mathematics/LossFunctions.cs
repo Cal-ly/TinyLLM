@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 
 namespace Core.Mathematics;
+
 /// <summary>
 /// Loss functions for neural network training
 /// </summary>
@@ -72,7 +73,7 @@ public static class LossFunctions
         predictions.CopyTo(gradients);
 
         // Subtract 1 from the target class
-        gradients[targetClass] -= 1f;
+        gradients[targetClass]--;
     }
 
     /// <summary>
@@ -87,7 +88,7 @@ public static class LossFunctions
         for (int i = 0; i < predictions.Length; i++)
         {
             float diff = predictions[i] - targets[i];
-            sumSquaredError += diff * diff;
+            sumSquaredError += (diff * diff);
         }
         return sumSquaredError / predictions.Length;
     }

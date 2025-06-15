@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 
 namespace Core.Mathematics;
+
 /// <summary>
 /// Essential numerical functions for neural networks
 /// </summary>
@@ -108,7 +109,7 @@ public static class NumericalFunctions
         for (int i = 0; i < input.Length; i++)
         {
             float diff = input[i] - mean;
-            sumSquaredDiff += diff * diff;
+            sumSquaredDiff += (diff * diff);
         }
         float variance = sumSquaredDiff / input.Length;
 
@@ -135,7 +136,7 @@ public static class NumericalFunctions
         // Apply scale and bias
         for (int i = 0; i < output.Length; i++)
         {
-            output[i] = output[i] * scale[i] + bias[i];
+            output[i] = (output[i] * scale[i]) + bias[i];
         }
     }
 
@@ -147,7 +148,7 @@ public static class NumericalFunctions
         float sumSquares = 0f;
         for (int i = 0; i < vector.Length; i++)
         {
-            sumSquares += vector[i] * vector[i];
+            sumSquares += (vector[i] * vector[i]);
         }
         return MathF.Sqrt(sumSquares);
     }
@@ -180,9 +181,9 @@ public static class NumericalFunctions
             float z0 = MathF.Sqrt(-2f * MathF.Log(u1)) * MathF.Cos(2f * MathF.PI * u2);
             float z1 = MathF.Sqrt(-2f * MathF.Log(u1)) * MathF.Sin(2f * MathF.PI * u2);
 
-            output[i] = z0 * stddev + mean;
+            output[i] = (z0 * stddev) + mean;
             if (i + 1 < output.Length)
-                output[i + 1] = z1 * stddev + mean;
+                output[i + 1] = (z1 * stddev) + mean;
         }
     }
 }

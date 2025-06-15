@@ -7,10 +7,14 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Folder Include="Abstractions\" />
-    <Folder Include="Tokenization\" />
-    <Folder Include="Loading\" />
     <Folder Include="FileSystem\" />
+	<Folder Include="Abstractions\" />
+	<Folder Include="Loading\" />
+	<Folder Include="Tokenization\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Core\Core.csproj" />
   </ItemGroup>
 
 </Project>

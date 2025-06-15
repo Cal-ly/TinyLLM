@@ -20,7 +20,7 @@ public static class WeightInitialization
         float limit = MathF.Sqrt(6f / (fanIn + fanOut));
         for (int i = 0; i < weights.Length; i++)
         {
-            weights[i] = (float)(random.NextDouble() * 2.0 - 1.0) * limit;
+            weights[i] = ((float)((random.NextDouble() * 2.0) - 1.0)) * limit;
         }
     }
 
@@ -43,7 +43,7 @@ public static class WeightInitialization
         float limit = MathF.Sqrt(6f / fanIn);
         for (int i = 0; i < weights.Length; i++)
         {
-            weights[i] = (float)(random.NextDouble() * 2.0 - 1.0) * limit;
+            weights[i] = ((float)((random.NextDouble() * 2.0) - 1.0)) * limit;
         }
     }
 
@@ -67,16 +67,16 @@ public static class WeightInitialization
             case WeightInitializationEnum.Xavier:
                 XavierNormal(weights, fanIn, fanOut, random);
                 break;
-            case Abstractions.WeightInitializationEnum.Kaiming:
+            case WeightInitializationEnum.Kaiming:
                 KaimingNormal(weights, fanIn, random);
                 break;
-            case Abstractions.WeightInitializationEnum.Normal:
+            case WeightInitializationEnum.Normal:
                 NumericalFunctions.RandomNormal(weights, random, mean: 0f, stddev: 0.02f);
                 break;
-            case Abstractions.WeightInitializationEnum.Uniform:
+            case WeightInitializationEnum.Uniform:
                 for (int i = 0; i < weights.Length; i++)
                 {
-                    weights[i] = (float)(random.NextDouble() * 2.0 - 1.0) * 0.1f;
+                    weights[i] = ((float)((random.NextDouble() * 2.0) - 1.0)) * 0.1f;
                 }
                 break;
             default:
