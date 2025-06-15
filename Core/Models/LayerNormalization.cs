@@ -120,9 +120,9 @@ public sealed class LayerNormalization : ILayer
         }
 
         return new LayerGradients(
-            WeightGradients: CombineScaleBiasGradients(scaleGradients, biasGradients),
+            WeightGradients: CombineScaleBiasGradients(scaleGradients, biasGradients), // Combine into 2D array
             InputGradients: inputGradients,
-            BiasGradients: biasGradients
+            BiasGradients: biasGradients // Bias gradients remain as 1D array
         );
     }
 

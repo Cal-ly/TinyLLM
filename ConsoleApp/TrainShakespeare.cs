@@ -136,56 +136,5 @@ public static class TrainShakespeare
             Console.WriteLine($"\nError: {ex.Message}");
             Console.WriteLine(ex.StackTrace);
         }
-
-        Console.WriteLine("\nPress any key to exit...");
-        Console.ReadKey();
-    }
-
-    private static async Task RunTestTrainingStep(TrainingContext context, ILogger logger)
-    {
-        await Task.Yield();
-
-        // Get a single batch
-        var batch = context.TrainDataset
-            .CreateBatches(context.Configuration.BatchSize, context.Configuration.SequenceLength)
-            .First();
-
-        logger.LogInformation("Processing batch with {Size} sequences of length {Length}",
-            batch.BatchSize, batch.SequenceLength);
-
-        // Process first sequence as a test
-        var inputTokens = batch.GetInputSequence(0);
-        var targetTokens = batch.GetTargetSequence(0);
-
-        // Forward pass
-        logger.LogInformation("Running forward pass...");
-        var logits = context.Model.Forward(inputTokens);
-        logger.LogInformation("Forward pass complete. Output shape: [{Length}]", logits.Length);
-
-        // Compute loss
-        var targetToken = targetTokens[targetTokens.Length - 1];
-        var loss = context.LossComputer.ComputeLoss(logits, targetToken);
-        logger.LogInformation("Loss computed: {Loss:F4}", loss);
-
-        // Test gradient computation
-        var gradients = GradientComputations.ComputeCrossEntropyGradient(logits, targetToken);
-        logger.LogInformation("Gradient computed. Shape: [{Length}]", gradients.Length);
-
-        // Verify gradient properties
-        var gradSum = gradients.Sum();
-        logger.LogInformation("Gradient sum (should be ~0): {Sum:F6}", gradSum);
-
-        // Sample the input/output
-        if (context.TrainDataset.Tokenizer is CharacterTokenizer charTokenizer)
-        {
-            var inputText = charTokenizer.Decode(inputTokens);
-            var targetChar = charTokenizer.GetCharacter(targetToken);
-            var predictedToken = logits.ToList().IndexOf(logits.Max());
-            var predictedChar = charTokenizer.GetCharacter(predictedToken);
-
-            logger.LogInformation("Sample - Input: \"{Input}...\" Target: '{Target}' Predicted: '{Predicted}'",
-                inputText.Length > 20 ? inputText.Substring(0, 20) : inputText,
-                targetChar, predictedChar);
-        }
     }
 }

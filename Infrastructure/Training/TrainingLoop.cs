@@ -255,11 +255,8 @@ public sealed class TrainingLoop
             var loss = lossComputer.ComputeLoss(logits, targetToken);
             totalLoss += loss;
 
-            // Compute loss gradient
-            var lossGradient = GradientComputations.ComputeCrossEntropyGradient(logits, targetToken);
-
-            // Backward pass through model
-            var modelGradients = BackwardThroughModel(model, lossGradient);
+            // Backward pass through model (full backward, returns all gradients)
+            var modelGradients = ((TransformerModel)model).Backward(logits, targetToken);
 
             // Accumulate gradients
             AccumulateGradients(allGradients, modelGradients);
@@ -278,20 +275,20 @@ public sealed class TrainingLoop
         return new TrainingStepResult(avgLoss, gradientNorm);
     }
 
-    private GradientCollection BackwardThroughModel(ILanguageModel model, float[] outputGradient)
-    {
-        // For now, create a simple gradient collection
-        // In a full implementation, this would propagate gradients through all layers
-        var gradients = new GradientCollection();
+    //private GradientCollection BackwardThroughModel(ILanguageModel model, float[] outputGradient)
+    //{
+    //    // For now, create a simple gradient collection
+    //    // In a full implementation, this would propagate gradients through all layers
+    //    var gradients = new GradientCollection();
 
-        // Add a dummy gradient for now - you'll need to implement proper backward pass
-        gradients.Add("dummy_gradient", outputGradient);
+    //    // Add a dummy gradient for now - need to implement proper backward pass
+    //    gradients.Add("dummy_gradient", outputGradient);
 
-        // Log that backward pass needs implementation
-        _logger.LogDebug("Backward pass needs full implementation");
+    //    // Log that backward pass needs implementation
+    //    _logger.LogDebug("Backward pass needs full implementation");
 
-        return gradients;
-    }
+    //    return gradients;
+    //}
 
     private static void AccumulateGradients(GradientCollection target, GradientCollection source)
     {

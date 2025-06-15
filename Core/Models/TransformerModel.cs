@@ -122,7 +122,7 @@ public sealed partial class TransformerModel : ILanguageModel
     }
 
     /// <summary>
-    /// Backward pass to compute gradients
+    /// Backward pass to compute gradients (legacy/simplified)
     /// </summary>
     public GradientCollection Backward(float loss)
     {
@@ -148,8 +148,8 @@ public sealed partial class TransformerModel : ILanguageModel
         if (_config!.UseLayerNorm)
         {
             var layerNormGrads = _finalLayerNorm!.Backward(currentGrad);
-            gradients.Add("final_layer_norm_scale", layerNormGrads.WeightGradients.Flatten());
-            gradients.Add("final_layer_norm_bias", layerNormGrads.BiasGradients ?? Array.Empty<float>());
+            gradients.Add("final_layer_norm_scale", layerNormGrads.WeightGradients.Flatten()); // 1D
+            gradients.Add("final_layer_norm_bias", layerNormGrads.BiasGradients ?? Array.Empty<float>()); // 1D
             currentGrad = layerNormGrads.InputGradients;
         }
 
@@ -175,6 +175,70 @@ public sealed partial class TransformerModel : ILanguageModel
         // Positional embeddings are fixed, so no gradients to compute
 
         // Backward through token embeddings
+        var embeddingGrads = _tokenEmbedding!.Backward(_lastInputTokens, currentGrad);
+        gradients.Add("token_embeddings", embeddingGrads);
+
+        return gradients;
+    }
+
+    /// <summary>
+    /// Full backward pass: computes gradients for all model parameters.
+    /// </summary>
+    /// <param name="logits">Logits from the forward pass</param>
+    /// <param name="targetToken">Target token index for loss</param>
+    /// <returns>GradientCollection for all parameters</returns>
+    public GradientCollection Backward(float[] logits, int targetToken)
+    {
+        if (!_isInitialized)
+            throw new InvalidOperationException("Model must be initialized before backward pass");
+
+        var gradients = new GradientCollection();
+
+        // 1. Compute loss gradient w.r.t. logits (cross-entropy)
+        var outputGradient = GradientComputations.ComputeCrossEntropyGradient(logits, targetToken);
+
+        // 2. Backward through output layer (last token only)
+        var outputLayerGrads = _outputLayer!.Backward(outputGradient);
+        gradients.Add("output_weights", outputLayerGrads.WeightGradients.Flatten());
+        if (outputLayerGrads.BiasGradients != null)
+            gradients.Add("output_bias", outputLayerGrads.BiasGradients);
+
+        // 3. Expand gradient to full sequence (only last token position gets nonzero gradient)
+        int seqLength = _lastInputTokens.Length;
+        int embeddingDim = _config!.EmbeddingDim;
+        var fullSequenceGrad = ExpandLastTokenGradient(outputLayerGrads.InputGradients, seqLength, embeddingDim);
+
+        // 4. Backward through final layer normalization (if used)
+        var currentGrad = fullSequenceGrad;
+        if (_config!.UseLayerNorm)
+        {
+            var layerNormGrads = _finalLayerNorm!.Backward(currentGrad);
+            gradients.Add("final_layer_norm_scale", layerNormGrads.WeightGradients.Flatten()); // 1D
+            gradients.Add("final_layer_norm_bias", layerNormGrads.BiasGradients ?? Array.Empty<float>()); // 1D
+            currentGrad = layerNormGrads.InputGradients;
+        }
+
+        // 5. Backward through transformer blocks (in reverse order)
+        for (int i = _config!.NumLayers - 1; i >= 0; i--)
+        {
+            var blockGrads = _transformerBlocks![i].BackwardDetailed(currentGrad);
+
+            // Collect gradients with layer-specific names
+            var layerPrefix = $"layer_{i}";
+            foreach (var (name, grad) in blockGrads)
+            {
+                if (name == "input_gradients")
+                    continue;
+                gradients.Add($"{layerPrefix}_{name}", grad);
+            }
+
+            // Prepare gradient for next block
+            currentGrad = blockGrads["input_gradients"].Unflatten(seqLength, embeddingDim);
+        }
+
+        // 6. No gradients for positional embeddings (fixed)
+
+        // 7. Backward through token embeddings
         var embeddingGrads = _tokenEmbedding!.Backward(_lastInputTokens, currentGrad);
         gradients.Add("token_embeddings", embeddingGrads);
 
@@ -368,6 +432,14 @@ public sealed partial class TransformerModel : ILanguageModel
         var gradient = new float[_config!.VocabularySize];
         gradient[0] = loss; // Simplified
         return gradient;
+    }
+
+    /// <summary>
+    /// Compute loss gradient (cross-entropy) for logits and target token.
+    /// </summary>
+    private float[] ComputeLossGradient(float[] logits, int targetToken)
+    {
+        return GradientComputations.ComputeCrossEntropyGradient(logits, targetToken);
     }
 
     /// <summary>
