@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using ManagedCuda;
-using ManagedCuda.BasicLinearAlgebra;
+using ManagedCuda.CudaBlas;
 
 namespace Core.Mathematics;
 /// <summary>
@@ -65,9 +65,9 @@ public static class MatrixOperations
             {
                 for (int kk = 0; kk < aCols; kk += blockSize)
                 {
-                    int iMax = Math.Min(ii + blockSize, aRows);
-                    int jMax = Math.Min(jj + blockSize, bCols);
-                    int kMax = Math.Min(kk + blockSize, aCols);
+                    int iMax = System.Math.Min(ii + blockSize, aRows);
+                    int jMax = System.Math.Min(jj + blockSize, bCols);
+                    int kMax = System.Math.Min(kk + blockSize, aCols);
 
                     for (int i = ii; i < iMax; i++)
                     {
@@ -93,33 +93,41 @@ public static class MatrixOperations
         ReadOnlySpan<float> a, ReadOnlySpan<float> b, Span<float> result,
         int aRows, int aCols, int bCols)
     {
-        using var context = new CudaContext();
-        using var cublas = new CudaBlas();
+        var context = new CudaContext();
+        var cublas = new CudaBlas();
 
-        var devA = new CudaDeviceVariable<float>(aRows * aCols);
-        var devB = new CudaDeviceVariable<float>(aCols * bCols);
-        var devC = new CudaDeviceVariable<float>(aRows * bCols);
+        try
+        {
+            var devA = new CudaDeviceVariable<float>(aRows * aCols);
+            var devB = new CudaDeviceVariable<float>(aCols * bCols);
+            var devC = new CudaDeviceVariable<float>(aRows * bCols);
 
-        devA.CopyToDevice(a.ToArray());
-        devB.CopyToDevice(b.ToArray());
+            devA.CopyToDevice(a.ToArray());
+            devB.CopyToDevice(b.ToArray());
 
-        const float alpha = 1.0f;
-        const float beta = 0.0f;
-        cublas.Gemm(Operation.NonTranspose, Operation.NonTranspose,
-            aRows, bCols, aCols,
-            alpha,
-            devA.DevicePointer, aRows,
-            devB.DevicePointer, aCols,
-            beta,
-            devC.DevicePointer, aRows);
+            const float alpha = 1.0f;
+            const float beta = 0.0f;
+            cublas.Gemm(Operation.NonTranspose, Operation.NonTranspose,
+                aRows, bCols, aCols,
+                alpha,
+                devA, aRows, // Changed from devA.DevicePointer to devA
+                devB, aCols, // Changed from devB.DevicePointer to devB
+                beta,
+                devC, aRows); // Changed from devC.DevicePointer to devC
 
-        var hostResult = new float[aRows * bCols];
-        devC.CopyToHost(hostResult);
-        hostResult.CopyTo(result);
+            var hostResult = new float[aRows * bCols];
+            devC.CopyToHost(hostResult);
+            hostResult.CopyTo(result);
 
-        devA.Dispose();
-        devB.Dispose();
-        devC.Dispose();
+            devA.Dispose();
+            devB.Dispose();
+            devC.Dispose();
+        }
+        finally
+        {
+            cublas.Dispose();
+            context.Dispose();
+        }
     }
 
     /// <summary>

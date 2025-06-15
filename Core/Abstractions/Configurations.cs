@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace Core.Abstractions;
+﻿namespace Core.Abstractions;
 /// <summary>
 /// Configuration for the overall model architecture
 /// </summary>

@@ -7,6 +7,11 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="ManagedCuda-12" Version="12.8.60" />
+    <PackageReference Include="ManagedCuda-CUBLAS" Version="12.8.60" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\Core\Core.csproj" />
   </ItemGroup>
 
