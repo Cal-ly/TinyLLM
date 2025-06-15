@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using ManagedCuda;
+using ManagedCuda.BasicLinearAlgebra;
 
 namespace Core.Mathematics;
 /// <summary>
@@ -10,11 +12,41 @@ namespace Core.Mathematics;
 /// </summary>
 public static class MatrixOperations
 {
+    private static readonly bool _cudaAvailable;
+
+    static MatrixOperations()
+    {
+        try
+        {
+            _cudaAvailable = CudaContext.GetDeviceCount() > 0;
+        }
+        catch
+        {
+            _cudaAvailable = false;
+        }
+    }
+
+    public static bool IsCudaAvailable => _cudaAvailable;
+
     /// <summary>
     /// Matrix multiplication: C = A * B
     /// A: [aRows x aCols], B: [aCols x bCols] -> C: [aRows x bCols]
+    /// Automatically uses CUDA when available.
     /// </summary>
     public static void MatrixMultiply(
+        ReadOnlySpan<float> a, ReadOnlySpan<float> b, Span<float> result,
+        int aRows, int aCols, int bCols)
+    {
+        if (_cudaAvailable)
+        {
+            MatrixMultiplyCuda(a, b, result, aRows, aCols, bCols);
+            return;
+        }
+
+        MatrixMultiplyCpu(a, b, result, aRows, aCols, bCols);
+    }
+
+    private static void MatrixMultiplyCpu(
         ReadOnlySpan<float> a, ReadOnlySpan<float> b, Span<float> result,
         int aRows, int aCols, int bCols)
     {
@@ -25,7 +57,6 @@ public static class MatrixOperations
         if (result.Length != (aRows * bCols))
             throw new ArgumentException($"Result matrix size mismatch: expected {aRows * bCols}, got {result.Length}");
 
-        // Standard matrix multiplication with loop tiling for cache efficiency
         const int blockSize = 64; // Optimize for L1 cache
 
         for (int ii = 0; ii < aRows; ii += blockSize)
@@ -56,6 +87,39 @@ public static class MatrixOperations
                 }
             }
         }
+    }
+
+    private static void MatrixMultiplyCuda(
+        ReadOnlySpan<float> a, ReadOnlySpan<float> b, Span<float> result,
+        int aRows, int aCols, int bCols)
+    {
+        using var context = new CudaContext();
+        using var cublas = new CudaBlas();
+
+        var devA = new CudaDeviceVariable<float>(aRows * aCols);
+        var devB = new CudaDeviceVariable<float>(aCols * bCols);
+        var devC = new CudaDeviceVariable<float>(aRows * bCols);
+
+        devA.CopyToDevice(a.ToArray());
+        devB.CopyToDevice(b.ToArray());
+
+        const float alpha = 1.0f;
+        const float beta = 0.0f;
+        cublas.Gemm(Operation.NonTranspose, Operation.NonTranspose,
+            aRows, bCols, aCols,
+            alpha,
+            devA.DevicePointer, aRows,
+            devB.DevicePointer, aCols,
+            beta,
+            devC.DevicePointer, aRows);
+
+        var hostResult = new float[aRows * bCols];
+        devC.CopyToHost(hostResult);
+        hostResult.CopyTo(result);
+
+        devA.Dispose();
+        devB.Dispose();
+        devC.Dispose();
     }
 
     /// <summary>

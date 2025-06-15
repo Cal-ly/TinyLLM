@@ -10,4 +10,8 @@
 	<!-- Always optimize math operations -->
   </PropertyGroup>
 
+  <ItemGroup>
+    <PackageReference Include="ManagedCuda" Version="12.2.163" />
+  </ItemGroup>
+
 </Project>
