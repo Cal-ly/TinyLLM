@@ -124,9 +124,9 @@ public sealed class TransformerBlock : ILayer
     }
 
     /// <summary>
-    /// Backward pass through transformer block
+    /// Backward pass through transformer block, returning gradients for each sub-component
     /// </summary>
-    public LayerGradients Backward(float[,] outputGradients)
+    public Dictionary<string, float[]> BackwardDetailed(float[,] outputGradients)
     {
         var gradients = new Dictionary<string, float[]>();
 
@@ -202,8 +202,15 @@ public sealed class TransformerBlock : ILayer
         // Add "input_gradients" for the parent layer to use
         gradients["input_gradients"] = inputGrad.Flatten();
 
+        return gradients;
+    }
+
+    LayerGradients ILayer.Backward(float[,] outputGradients)
+    {
+        var grads = BackwardDetailed(outputGradients);
+        var inputGrad = grads["input_gradients"].Unflatten(outputGradients.GetLength(0), _embeddingDim);
         return new LayerGradients(
-            WeightGradients: CombineAllGradients(gradients),
+            WeightGradients: CombineAllGradients(grads),
             InputGradients: inputGrad
         );
     }

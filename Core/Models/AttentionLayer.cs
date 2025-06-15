@@ -351,14 +351,14 @@ public sealed class AttentionLayer : ILayer
         return outputGrads;
     }
 
-    private float[,] CombineWeightGradients(params float[,][] gradients)
+    private float[,] CombineWeightGradients(params float[][,] gradients)
     {
         // Combine all weight gradients into a single matrix
         int totalSize = gradients.Sum(g => g.Length);
         return new float[1, totalSize]; // Simplified
     }
 
-    private float[] CombineWeights(params float[,][] weights)
+    private float[] CombineWeights(params float[][,] weights)
     {
         return weights.SelectMany(w => w.Flatten()).ToArray();
     }
