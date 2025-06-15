@@ -8,7 +8,6 @@
 
   <ItemGroup>
     <Folder Include="Configuration\" />
-    <Folder Include="Training\" />
     <Folder Include="Checkpointing\" />
     <Folder Include="Generation\" />
   </ItemGroup>
