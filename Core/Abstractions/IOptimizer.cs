@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Core.Optimizers;
 
 namespace Core.Abstractions;
 /// <summary>
@@ -42,4 +43,9 @@ public interface IOptimizer
     /// Load optimizer state from checkpoint
     /// </summary>
     void LoadState(OptimizerState state);
+
+    /// <summary>
+    /// Get comprehensive statistics about the optimizer's state
+    /// </summary>
+    OptimizerStatistics GetStatistics();
 }

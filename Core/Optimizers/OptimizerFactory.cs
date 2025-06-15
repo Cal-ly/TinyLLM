@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Core.Abstractions;
+using Core.Models;
 
 namespace Core.Optimizers;
 /// <summary>
