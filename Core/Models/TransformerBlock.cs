@@ -157,8 +157,9 @@ public sealed class TransformerBlock : ILayer
         if (_useLayerNorm)
         {
             ffNormGrads = _feedForwardLayerNorm.Backward(ffLayerGrads.InputGradients);
-            gradients["ff_layer_norm_scale"] = ffNormGrads.WeightGradients.Flatten();
-            gradients["ff_layer_norm_bias"] = ffNormGrads.BiasGradients ?? Array.Empty<float>();
+            var (ffScale, ffBias) = SplitLayerNormGrads(ffNormGrads.WeightGradients);
+            gradients["ff_layer_norm_scale"] = ffScale;
+            gradients["ff_layer_norm_bias"] = ffBias;
 
             // Add gradients from both paths (residual)
             afterAttentionGrad = AddGradients(afterAttentionGrad, ffNormGrads.InputGradients);
@@ -189,8 +190,9 @@ public sealed class TransformerBlock : ILayer
         if (_useLayerNorm)
         {
             var attentionNormGrads = _attentionLayerNorm.Backward(attentionLayerGrads.InputGradients);
-            gradients["attention_layer_norm_scale"] = attentionNormGrads.WeightGradients.Flatten();
-            gradients["attention_layer_norm_bias"] = attentionNormGrads.BiasGradients ?? Array.Empty<float>();
+            var (attScale, attBias) = SplitLayerNormGrads(attentionNormGrads.WeightGradients);
+            gradients["attention_layer_norm_scale"] = attScale;
+            gradients["attention_layer_norm_bias"] = attBias;
 
             inputGrad = AddGradients(inputGrad, attentionNormGrads.InputGradients);
         }
@@ -415,10 +417,35 @@ public sealed class TransformerBlock : ILayer
         return result;
     }
 
+    private (float[] scale, float[] bias) SplitLayerNormGrads(float[,] combined)
+    {
+        var scale = new float[_embeddingDim];
+        var bias = new float[_embeddingDim];
+        for (int i = 0; i < _embeddingDim; i++)
+        {
+            scale[i] = combined[0, i];
+            bias[i] = combined[0, _embeddingDim + i];
+        }
+        return (scale, bias);
+    }
+
     private static float[,] CombineAllGradients(Dictionary<string, float[]> gradients)
     {
-        var totalSize = gradients.Values.Sum(g => g.Length);
-        return new float[1, totalSize]; // Simplified
+        var all = new List<float>();
+
+        foreach (var (name, values) in gradients)
+        {
+            if (name == "input_gradients")
+                continue;
+
+            all.AddRange(values);
+        }
+
+        var result = new float[1, all.Count];
+        for (int i = 0; i < all.Count; i++)
+            result[0, i] = all[i];
+
+        return result;
     }
 
     private static Dictionary<string, float[]> ExtractPrefixedParams(Dictionary<string, float[]> parameters, string prefix, string[] excludePrefixes)

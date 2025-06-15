@@ -148,8 +148,9 @@ public sealed partial class TransformerModel : ILanguageModel
         if (_config!.UseLayerNorm)
         {
             var layerNormGrads = _finalLayerNorm!.Backward(currentGrad);
-            gradients.Add("final_layer_norm_scale", layerNormGrads.WeightGradients.Flatten()); // 1D
-            gradients.Add("final_layer_norm_bias", layerNormGrads.BiasGradients ?? Array.Empty<float>()); // 1D
+            var (scaleGrad, biasGrad) = SplitLayerNormGrads(layerNormGrads.WeightGradients, _config!.EmbeddingDim);
+            gradients.Add("final_layer_norm_scale", scaleGrad);
+            gradients.Add("final_layer_norm_bias", biasGrad);
             currentGrad = layerNormGrads.InputGradients;
         }
 
@@ -213,8 +214,9 @@ public sealed partial class TransformerModel : ILanguageModel
         if (_config!.UseLayerNorm)
         {
             var layerNormGrads = _finalLayerNorm!.Backward(currentGrad);
-            gradients.Add("final_layer_norm_scale", layerNormGrads.WeightGradients.Flatten()); // 1D
-            gradients.Add("final_layer_norm_bias", layerNormGrads.BiasGradients ?? Array.Empty<float>()); // 1D
+            var (scaleGrad, biasGrad) = SplitLayerNormGrads(layerNormGrads.WeightGradients, embeddingDim);
+            gradients.Add("final_layer_norm_scale", scaleGrad);
+            gradients.Add("final_layer_norm_bias", biasGrad);
             currentGrad = layerNormGrads.InputGradients;
         }
 
@@ -456,6 +458,18 @@ public sealed partial class TransformerModel : ILanguageModel
         }
 
         return fullGrad;
+    }
+
+    private static (float[] scale, float[] bias) SplitLayerNormGrads(float[,] combined, int dim)
+    {
+        var scale = new float[dim];
+        var bias = new float[dim];
+        for (int i = 0; i < dim; i++)
+        {
+            scale[i] = combined[0, i];
+            bias[i] = combined[0, dim + i];
+        }
+        return (scale, bias);
     }
 
     /// <summary>
