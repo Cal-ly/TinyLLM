@@ -4,6 +4,14 @@
     <TargetFramework>net9.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+	<AllowUnsafeBlocks>true</AllowUnsafeBlocks>	<!-- For high-performance operations -->
+	<Optimize>true</Optimize> <!-- Always optimize math operations -->
   </PropertyGroup>
+
+  <ItemGroup>
+	<Folder Include="Abstractions\" />
+    <Folder Include="Models\" />
+    <Folder Include="Optimizers\" />
+  </ItemGroup>
 
 </Project>
