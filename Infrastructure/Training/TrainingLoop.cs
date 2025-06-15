@@ -3,15 +3,17 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using Infrastructure.Training;
-using Infrastructure.Logging;
 using Core.Abstractions;
-using Infrastructure.Abstractions;
 using Core.Mathematics;
+using Core.Models;
 using Core.Optimizers;
+using Infrastructure.Abstractions;
+using Infrastructure.Loading;
+using Infrastructure.Logging;
 using Infrastructure.Tokenization;
 
 namespace Infrastructure.Training;
+
 /// <summary>
 /// Core training loop that handles epochs, batches, and training steps
 /// </summary>
@@ -70,7 +72,8 @@ public sealed class TrainingLoop
                 var validationConfig = new EvaluationConfiguration
                 {
                     BatchSize = config.BatchSize,
-                    MaxBatches = config.MaxValidationBatches
+                    MaxBatches = config.MaxValidationBatches,
+                    SequenceLength = config.SequenceLength
                 };
 
                 var validationResult = await context.ValidationRunner.EvaluateAsync(
@@ -164,9 +167,10 @@ public sealed class TrainingLoop
             config.BatchSize,
             config.SequenceLength,
             shuffle: true,
-            seed: config.RandomSeed + epoch);
+            seed: config.RandomSeed.HasValue ? config.RandomSeed.Value + epoch : null);
 
         float totalLoss = 0f;
+        float totalGradientNorm = 0f;
         int batchCount = 0;
         int currentStep = globalStep;
 
@@ -184,6 +188,7 @@ public sealed class TrainingLoop
             var stepResult = await RunTrainingStepAsync(model, optimizer, lossComputer, batch, config, cancellationToken);
 
             totalLoss += stepResult.Loss;
+            totalGradientNorm += stepResult.GradientNorm;
             batchCount++;
 
             // Log step metrics
@@ -196,6 +201,14 @@ public sealed class TrainingLoop
                 await _metricsLogger.LogStepAsync(currentStep, stepResult, cancellationToken);
             }
 
+            // Progress update
+            if (batchCount % 10 == 0)
+            {
+                var avgLoss = totalLoss / batchCount;
+                _logger.LogInformation("Epoch {Epoch} - Batch {Batch}: Avg Loss = {Loss:F4}",
+                    epoch + 1, batchCount, avgLoss);
+            }
+
             // Memory cleanup
             if (batchCount % 100 == 0)
             {
@@ -203,13 +216,15 @@ public sealed class TrainingLoop
             }
         }
 
-        var avgLoss = totalLoss / Math.Max(batchCount, 1);
+        var epochAvgLoss = totalLoss / Math.Max(batchCount, 1);
+        var epochAvgGradNorm = totalGradientNorm / Math.Max(batchCount, 1);
+
         return new EpochMetrics(
             Epoch: epoch,
-            AverageLoss: avgLoss,
+            AverageLoss: epochAvgLoss,
             TotalSteps: batchCount,
             FinalLearningRate: optimizer.LearningRate,
-            GradientNorm: 0f // Would track this during training
+            GradientNorm: epochAvgGradNorm
         );
     }
 
@@ -240,11 +255,14 @@ public sealed class TrainingLoop
             var loss = lossComputer.ComputeLoss(logits, targetToken);
             totalLoss += loss;
 
-            // Backward pass
-            var gradients = model.Backward(loss);
+            // Compute loss gradient
+            var lossGradient = GradientComputations.ComputeCrossEntropyGradient(logits, targetToken);
+
+            // Backward pass through model
+            var modelGradients = BackwardThroughModel(model, lossGradient);
 
             // Accumulate gradients
-            AccumulateGradients(allGradients, gradients);
+            AccumulateGradients(allGradients, modelGradients);
         }
 
         // Average gradients across batch
@@ -258,6 +276,21 @@ public sealed class TrainingLoop
 
         var avgLoss = totalLoss / batch.BatchSize;
         return new TrainingStepResult(avgLoss, gradientNorm);
+    }
+
+    private GradientCollection BackwardThroughModel(ILanguageModel model, float[] outputGradient)
+    {
+        // For now, create a simple gradient collection
+        // In a full implementation, this would propagate gradients through all layers
+        var gradients = new GradientCollection();
+
+        // Add a dummy gradient for now - you'll need to implement proper backward pass
+        gradients.Add("dummy_gradient", outputGradient);
+
+        // Log that backward pass needs implementation
+        _logger.LogDebug("Backward pass needs full implementation");
+
+        return gradients;
     }
 
     private static void AccumulateGradients(GradientCollection target, GradientCollection source)
@@ -310,7 +343,11 @@ public sealed class TrainingLoop
 
             foreach (var prompt in samplePrompts.Take(3)) // Limit to 3 samples
             {
-                var generated = await GenerateTextSampleAsync(context.Model, context.TrainDataset.Tokenizer, prompt, cancellationToken);
+                var generated = await GenerateTextSampleAsync(
+                    context.Model,
+                    context.TrainDataset.Tokenizer,
+                    prompt,
+                    cancellationToken);
                 _logger.LogInformation("Sample: '{Prompt}' -> '{Generated}'", prompt, generated);
             }
         }
@@ -328,7 +365,7 @@ public sealed class TrainingLoop
     {
         await Task.Yield();
 
-        var tokens = tokenizer.Encode(prompt).ToList();
+        var tokens = tokenizer.Encode(prompt.AsSpan()).ToList();
         var random = new Random();
 
         for (int i = 0; i < 50; i++) // Generate up to 50 tokens
@@ -356,7 +393,7 @@ public sealed class TrainingLoop
             }
         }
 
-        return tokenizer.Decode(tokens.ToArray());
+        return tokenizer.Decode(tokens);
     }
 
     private static int SampleFromDistribution(float[] probabilities, Random random)

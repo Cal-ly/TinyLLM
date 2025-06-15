@@ -22,7 +22,7 @@ public static class TrainShakespeare
             // Configuration
             // Navigate up from bin/Debug/net9.0 to solution root
             var solutionDir = Path.GetFullPath(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "..", "..", "..", ".."));
-            var dataPath = Path.Combine(solutionDir, "Infrastructure", "Data", "shakespeare.txt");
+            var dataPath = Path.Combine(solutionDir, "Infrastructure", "Data", "shakespeare1mil.txt");
             var outputDir = Path.Combine(solutionDir, "Models", "shakespeare", DateTime.Now.ToString("yyyyMMdd_HHmmss"));
 
             // Check if data file exists
@@ -74,7 +74,7 @@ public static class TrainShakespeare
                         MinLearningRate = 1e-5f
                     }
                 },
-                NumEpochs = 1000, // Start small for testing
+                NumEpochs = 2, // Start very small for initial testing
                 BatchSize = 16,
                 SequenceLength = 64,
                 ValidationSplit = 0.0f, // We already split manually
@@ -118,12 +118,15 @@ public static class TrainShakespeare
                 ValidationRunner = validationRunner
             };
 
-            // Run a single training step as a test
-            logger.LogInformation("\nRunning test training step...");
-            await RunTestTrainingStep(context, logger);
+            // Run training loop
+            logger.LogInformation("\nStarting training...");
+            var trainingLoop = new TrainingLoop(logger, metricsLogger);
+            var result = await trainingLoop.RunAsync(context, startEpoch: 0, CancellationToken.None);
 
-            logger.LogInformation("\nTest completed successfully!");
-            logger.LogInformation("Ready for full training loop implementation.");
+            logger.LogInformation("\nTraining completed!");
+            logger.LogInformation("Best validation loss: {Loss:F4}", result.BestValidationLoss);
+            logger.LogInformation("Total epochs: {Epochs}", result.TotalEpochs);
+            logger.LogInformation("Total steps: {Steps}", result.TotalSteps);
 
             // Cleanup
             metricsLogger.Dispose();
@@ -133,6 +136,9 @@ public static class TrainShakespeare
             Console.WriteLine($"\nError: {ex.Message}");
             Console.WriteLine(ex.StackTrace);
         }
+
+        Console.WriteLine("\nPress any key to exit...");
+        Console.ReadKey();
     }
 
     private static async Task RunTestTrainingStep(TrainingContext context, ILogger logger)
