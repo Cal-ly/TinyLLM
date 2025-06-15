@@ -14,23 +14,23 @@ namespace Core.Models;
 /// </summary>
 public sealed class TransformerModel : ILanguageModel
 {
-    private ModelConfiguration _config;
-    private EmbeddingLayer _tokenEmbedding;
-    private PositionalEmbedding _positionalEmbedding;
-    private TransformerBlock[] _transformerBlocks;
-    private LayerNormalization _finalLayerNorm;
-    private OutputLayer _outputLayer;
+    private ModelConfiguration? _config;
+    private EmbeddingLayer? _tokenEmbedding;
+    private PositionalEmbedding? _positionalEmbedding;
+    private TransformerBlock[]? _transformerBlocks;
+    private LayerNormalization? _finalLayerNorm;
+    private OutputLayer? _outputLayer;
 
     // State for backward pass
     private int[] _lastInputTokens = Array.Empty<int>();
     private float[,] _lastEmbeddings = new float[0, 0];
-    private float[,][] _lastBlockOutputs = Array.Empty<float[,]>();
+    private float[][,] _lastBlockOutputs = new float[0][,];
     private float[,] _lastNormalized = new float[0, 0];
     private float[] _lastLogits = Array.Empty<float>();
 
     private bool _isInitialized = false;
 
-    public ModelConfiguration Configuration => _config;
+    public ModelConfiguration Configuration => _config!;
     public bool IsInitialized => _isInitialized;
 
     /// <summary>
@@ -42,26 +42,26 @@ public sealed class TransformerModel : ILanguageModel
         _config = config;
 
         // Initialize all layers
-        _tokenEmbedding = new EmbeddingLayer(_config.VocabularySize, _config.EmbeddingDim);
-        _positionalEmbedding = new PositionalEmbedding(_config.ContextLength, _config.EmbeddingDim);
+        _tokenEmbedding = new EmbeddingLayer(_config!.VocabularySize, _config!.EmbeddingDim);
+        _positionalEmbedding = new PositionalEmbedding(_config!.ContextLength, _config!.EmbeddingDim);
 
         // Create transformer blocks
-        _transformerBlocks = new TransformerBlock[_config.NumLayers];
-        for (int i = 0; i < _config.NumLayers; i++)
+        _transformerBlocks = new TransformerBlock[_config!.NumLayers];
+        for (int i = 0; i < _config!.NumLayers; i++)
         {
             _transformerBlocks[i] = new TransformerBlock(
-                embeddingDim: _config.EmbeddingDim,
-                numAttentionHeads: _config.NumAttentionHeads,
-                feedForwardDim: _config.FeedForwardDim,
-                dropoutRate: _config.DropoutRate,
-                activationType: _config.ActivationFunction,
-                useLayerNorm: _config.UseLayerNorm,
-                useResidualConnections: _config.UseResidualConnections
+                embeddingDim: _config!.EmbeddingDim,
+                numAttentionHeads: _config!.NumAttentionHeads,
+                feedForwardDim: _config!.FeedForwardDim,
+                dropoutRate: _config!.DropoutRate,
+                activationType: _config!.ActivationFunction,
+                useLayerNorm: _config!.UseLayerNorm,
+                useResidualConnections: _config!.UseResidualConnections
             );
         }
 
-        _finalLayerNorm = new LayerNormalization(_config.EmbeddingDim);
-        _outputLayer = new OutputLayer(_config.EmbeddingDim, _config.VocabularySize);
+        _finalLayerNorm = new LayerNormalization(_config!.EmbeddingDim);
+        _outputLayer = new OutputLayer(_config!.EmbeddingDim, _config!.VocabularySize);
 
         // Initialize weights
         InitializeWeights();
@@ -82,40 +82,40 @@ public sealed class TransformerModel : ILanguageModel
         if (inputTokens.Length == 0)
             throw new ArgumentException("Input tokens cannot be empty");
 
-        if (inputTokens.Length > _config.ContextLength)
-            throw new ArgumentException($"Input sequence length ({inputTokens.Length}) exceeds context length ({_config.ContextLength})");
+        if (inputTokens.Length > _config!.ContextLength)
+            throw new ArgumentException($"Input sequence length ({inputTokens.Length}) exceeds context length ({_config!.ContextLength})");
 
         // Store input for backward pass
         _lastInputTokens = inputTokens.ToArray();
         int seqLength = inputTokens.Length;
 
         // 1. Token embeddings: [seq_length] -> [seq_length, embedding_dim]
-        var embeddings = _tokenEmbedding.Forward(inputTokens);
+        var embeddings = _tokenEmbedding!.Forward(inputTokens);
 
         // 2. Add positional embeddings
-        _positionalEmbedding.AddPositionalEmbeddings(embeddings, seqLength);
+        _positionalEmbedding!.AddPositionalEmbeddings(embeddings, seqLength);
         _lastEmbeddings = (float[,])embeddings.Clone();
 
         // 3. Pass through transformer blocks
         var hiddenStates = embeddings;
-        _lastBlockOutputs = new float[,][_config.NumLayers];
+        _lastBlockOutputs = new float[_config!.NumLayers][,];
 
-        for (int i = 0; i < _config.NumLayers; i++)
+        for (int i = 0; i < _config!.NumLayers; i++)
         {
-            hiddenStates = _transformerBlocks[i].Forward(hiddenStates);
+            hiddenStates = _transformerBlocks![i].Forward(hiddenStates);
             _lastBlockOutputs[i] = (float[,])hiddenStates.Clone();
         }
 
         // 4. Final layer normalization
-        if (_config.UseLayerNorm)
+        if (_config!.UseLayerNorm)
         {
-            hiddenStates = _finalLayerNorm.Forward(hiddenStates);
+            hiddenStates = _finalLayerNorm!.Forward(hiddenStates);
             _lastNormalized = (float[,])hiddenStates.Clone();
         }
 
         // 5. Output projection - only use the last token for next token prediction
         var lastTokenHidden = ExtractLastToken(hiddenStates, seqLength);
-        var logits = _outputLayer.Forward(lastTokenHidden);
+        var logits = _outputLayer!.Forward(lastTokenHidden);
         _lastLogits = (float[])logits.Clone();
 
         return logits;
@@ -135,28 +135,28 @@ public sealed class TransformerModel : ILanguageModel
         var outputGradient = ComputeLossGradient(loss);
 
         // Backward through output layer
-        var outputLayerGrads = _outputLayer.Backward(outputGradient);
+        var outputLayerGrads = _outputLayer!.Backward(outputGradient);
         gradients.Add("output_weights", outputLayerGrads.WeightGradients.Flatten());
         gradients.Add("output_bias", outputLayerGrads.BiasGradients ?? Array.Empty<float>());
 
         // Expand gradient to full sequence (we only computed gradient for last token)
         var seqLength = _lastInputTokens.Length;
-        var fullSequenceGrad = ExpandLastTokenGradient(outputLayerGrads.InputGradients, seqLength, _config.EmbeddingDim);
+        var fullSequenceGrad = ExpandLastTokenGradient(outputLayerGrads.InputGradients, seqLength, _config!.EmbeddingDim);
 
         // Backward through final layer norm
         var currentGrad = fullSequenceGrad;
-        if (_config.UseLayerNorm)
+        if (_config!.UseLayerNorm)
         {
-            var layerNormGrads = _finalLayerNorm.Backward(currentGrad);
+            var layerNormGrads = _finalLayerNorm!.Backward(currentGrad);
             gradients.Add("final_layer_norm_scale", layerNormGrads.WeightGradients.Flatten());
             gradients.Add("final_layer_norm_bias", layerNormGrads.BiasGradients ?? Array.Empty<float>());
             currentGrad = layerNormGrads.InputGradients;
         }
 
         // Backward through transformer blocks (in reverse order)
-        for (int i = _config.NumLayers - 1; i >= 0; i--)
+        for (int i = _config!.NumLayers - 1; i >= 0; i--)
         {
-            var blockGrads = _transformerBlocks[i].BackwardDetailed(currentGrad);
+            var blockGrads = _transformerBlocks![i].BackwardDetailed(currentGrad);
 
             // Collect gradients with layer-specific names
             var layerPrefix = $"layer_{i}";
@@ -168,14 +168,14 @@ public sealed class TransformerModel : ILanguageModel
                 gradients.Add($"{layerPrefix}_{name}", grad);
             }
 
-            currentGrad = blockGrads["input_gradients"].Unflatten(seqLength, _config.EmbeddingDim);
+            currentGrad = blockGrads["input_gradients"].Unflatten(seqLength, _config!.EmbeddingDim);
         }
 
         // Backward through positional embeddings (just pass through)
         // Positional embeddings are fixed, so no gradients to compute
 
         // Backward through token embeddings
-        var embeddingGrads = _tokenEmbedding.Backward(_lastInputTokens, currentGrad);
+        var embeddingGrads = _tokenEmbedding!.Backward(_lastInputTokens, currentGrad);
         gradients.Add("token_embeddings", embeddingGrads);
 
         return gradients;
@@ -192,21 +192,21 @@ public sealed class TransformerModel : ILanguageModel
         // Update token embeddings
         if (gradients.HasGradients("token_embeddings"))
         {
-            _tokenEmbedding.ApplyGradients(gradients.GetGradients("token_embeddings"), optimizer);
+            _tokenEmbedding!.ApplyGradients(gradients.GetGradients("token_embeddings"), optimizer);
         }
 
         // Update transformer blocks
-        for (int i = 0; i < _config.NumLayers; i++)
+        for (int i = 0; i < _config!.NumLayers; i++)
         {
             var layerPrefix = $"layer_{i}";
             var layerGradients = ExtractLayerGradients(gradients, layerPrefix);
-            _transformerBlocks[i].ApplyGradients(layerGradients, optimizer);
+            _transformerBlocks![i].ApplyGradients(layerGradients, optimizer);
         }
 
         // Update final layer norm
-        if (_config.UseLayerNorm && gradients.HasGradients("final_layer_norm_scale"))
+        if (_config!.UseLayerNorm && gradients.HasGradients("final_layer_norm_scale"))
         {
-            _finalLayerNorm.ApplyGradients(
+            _finalLayerNorm!.ApplyGradients(
                 gradients.GetGradients("final_layer_norm_scale"),
                 gradients.GetGradients("final_layer_norm_bias"),
                 optimizer
@@ -216,7 +216,7 @@ public sealed class TransformerModel : ILanguageModel
         // Update output layer
         if (gradients.HasGradients("output_weights"))
         {
-            _outputLayer.ApplyGradients(
+            _outputLayer!.ApplyGradients(
                 gradients.GetGradients("output_weights"),
                 gradients.GetGradients("output_bias"),
                 optimizer
@@ -235,12 +235,12 @@ public sealed class TransformerModel : ILanguageModel
         var parameters = new Dictionary<string, float[]>();
 
         // Token embeddings
-        parameters["token_embeddings"] = _tokenEmbedding.GetWeights().Flatten();
+        parameters["token_embeddings"] = _tokenEmbedding!.GetWeights().Flatten();
 
         // Transformer blocks
-        for (int i = 0; i < _config.NumLayers; i++)
+        for (int i = 0; i < _config!.NumLayers; i++)
         {
-            var layerParams = _transformerBlocks[i].GetParameters();
+            var layerParams = _transformerBlocks![i].GetParameters();
             foreach (var (name, weights) in layerParams)
             {
                 parameters[$"layer_{i}_{name}"] = weights;
@@ -248,20 +248,20 @@ public sealed class TransformerModel : ILanguageModel
         }
 
         // Final layer norm
-        if (_config.UseLayerNorm)
+        if (_config!.UseLayerNorm)
         {
-            var (scale, bias) = _finalLayerNorm.GetParameters();
+            var (scale, bias) = _finalLayerNorm!.GetParameters();
             parameters["final_layer_norm_scale"] = scale;
             parameters["final_layer_norm_bias"] = bias;
         }
 
         // Output layer
-        var (outputWeights, outputBias) = _outputLayer.GetParameters();
+        var (outputWeights, outputBias) = _outputLayer!.GetParameters();
         parameters["output_weights"] = outputWeights.Flatten();
         if (outputBias != null)
             parameters["output_bias"] = outputBias;
 
-        return new ModelState(_config, parameters);
+        return new ModelState(_config!, parameters);
     }
 
     /// <summary>
@@ -274,23 +274,23 @@ public sealed class TransformerModel : ILanguageModel
         // Load token embeddings
         if (state.Parameters.TryGetValue("token_embeddings", out var tokenEmbeddings))
         {
-            _tokenEmbedding.LoadWeights(tokenEmbeddings.Unflatten(_config.VocabularySize, _config.EmbeddingDim));
+            _tokenEmbedding!.LoadWeights(tokenEmbeddings.Unflatten(_config!.VocabularySize, _config!.EmbeddingDim));
         }
 
         // Load transformer blocks
-        for (int i = 0; i < _config.NumLayers; i++)
+        for (int i = 0; i < _config!.NumLayers; i++)
         {
             var layerParams = ExtractLayerParameters(state.Parameters, $"layer_{i}");
-            _transformerBlocks[i].LoadParameters(layerParams);
+            _transformerBlocks![i].LoadParameters(layerParams);
         }
 
         // Load final layer norm
-        if (_config.UseLayerNorm)
+        if (_config!.UseLayerNorm)
         {
             if (state.Parameters.TryGetValue("final_layer_norm_scale", out var scale) &&
                 state.Parameters.TryGetValue("final_layer_norm_bias", out var bias))
             {
-                _finalLayerNorm.LoadParameters(scale, bias);
+                _finalLayerNorm!.LoadParameters(scale, bias);
             }
         }
 
@@ -298,8 +298,8 @@ public sealed class TransformerModel : ILanguageModel
         if (state.Parameters.TryGetValue("output_weights", out var outputWeights))
         {
             var outputBias = state.Parameters.GetValueOrDefault("output_bias");
-            var weightsMatrix = outputWeights.Unflatten(_config.EmbeddingDim, _config.VocabularySize);
-            _outputLayer.LoadParameters(weightsMatrix, outputBias);
+            var weightsMatrix = outputWeights.Unflatten(_config!.EmbeddingDim, _config!.VocabularySize);
+            _outputLayer!.LoadParameters(weightsMatrix, outputBias);
         }
     }
 
@@ -311,7 +311,7 @@ public sealed class TransformerModel : ILanguageModel
         _isInitialized = false;
         _lastInputTokens = Array.Empty<int>();
         _lastEmbeddings = new float[0, 0];
-        _lastBlockOutputs = Array.Empty<float[,]>();
+        _lastBlockOutputs = new float[_config!.NumLayers][,];
         _lastNormalized = new float[0, 0];
         _lastLogits = Array.Empty<float>();
     }
@@ -324,22 +324,22 @@ public sealed class TransformerModel : ILanguageModel
         var random = new Random(42); // Fixed seed for reproducibility
 
         // Initialize token embeddings
-        _tokenEmbedding.InitializeWeights(random, _config.WeightInit);
+        _tokenEmbedding!.InitializeWeights(random, _config!.WeightInit);
 
         // Initialize transformer blocks
-        foreach (var block in _transformerBlocks)
+        foreach (var block in _transformerBlocks!)
         {
-            block.InitializeWeights(random, _config.WeightInit);
+            block.InitializeWeights(random, _config!.WeightInit);
         }
 
         // Initialize final layer norm
-        if (_config.UseLayerNorm)
+        if (_config!.UseLayerNorm)
         {
-            _finalLayerNorm.InitializeWeights(random);
+            _finalLayerNorm!.InitializeWeights(random);
         }
 
         // Initialize output layer
-        _outputLayer.InitializeWeights(random, _config.WeightInit);
+        _outputLayer!.InitializeWeights(random, _config!.WeightInit);
     }
 
     /// <summary>
@@ -365,7 +365,7 @@ public sealed class TransformerModel : ILanguageModel
     {
         // For now, return a simple gradient
         // In practice, this would be computed by the training loop
-        var gradient = new float[_config.VocabularySize];
+        var gradient = new float[_config!.VocabularySize];
         gradient[0] = loss; // Simplified
         return gradient;
     }
@@ -373,14 +373,14 @@ public sealed class TransformerModel : ILanguageModel
     /// <summary>
     /// Expand gradient from last token to full sequence
     /// </summary>
-    private static float[,] ExpandLastTokenGradient(float[] lastTokenGrad, int seqLength, int embeddingDim)
+    private static float[,] ExpandLastTokenGradient(float[,] lastTokenGrad, int seqLength, int embeddingDim)
     {
         var fullGrad = new float[seqLength, embeddingDim];
 
         // Only the last token position gets gradients
         for (int i = 0; i < embeddingDim; i++)
         {
-            fullGrad[seqLength - 1, i] = lastTokenGrad[i];
+            fullGrad[seqLength - 1, i] = lastTokenGrad[0, i];
         }
 
         return fullGrad;
