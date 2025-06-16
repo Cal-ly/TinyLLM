@@ -275,21 +275,6 @@ public sealed class TrainingLoop
         return new TrainingStepResult(avgLoss, gradientNorm);
     }
 
-    //private GradientCollection BackwardThroughModel(ILanguageModel model, float[] outputGradient)
-    //{
-    //    // For now, create a simple gradient collection
-    //    // In a full implementation, this would propagate gradients through all layers
-    //    var gradients = new GradientCollection();
-
-    //    // Add a dummy gradient for now - need to implement proper backward pass
-    //    gradients.Add("dummy_gradient", outputGradient);
-
-    //    // Log that backward pass needs implementation
-    //    _logger.LogDebug("Backward pass needs full implementation");
-
-    //    return gradients;
-    //}
-
     private static void AccumulateGradients(GradientCollection target, GradientCollection source)
     {
         foreach (var paramName in source.ParameterNames)
@@ -344,6 +329,7 @@ public sealed class TrainingLoop
                     context.Model,
                     context.TrainDataset.Tokenizer,
                     prompt,
+                    context.Configuration.SampleTemperature, // Pass sampleTemperature from context.Configuration
                     cancellationToken);
                 _logger.LogInformation("Sample: '{Prompt}' -> '{Generated}'", prompt, generated);
             }
@@ -358,6 +344,7 @@ public sealed class TrainingLoop
         ILanguageModel model,
         ITokenizer tokenizer,
         string prompt,
+        float sampleTemperature, // Add sampleTemperature as a parameter
         CancellationToken cancellationToken)
     {
         await Task.Yield();
@@ -365,7 +352,6 @@ public sealed class TrainingLoop
         var tokens = tokenizer.Encode(prompt.AsSpan()).ToList();
         var random = new Random();
 
-        var temperature = context.Configuration.SampleTemperature;
         for (int i = 0; i < 50; i++) // Generate up to 50 tokens
         {
             if (cancellationToken.IsCancellationRequested)
@@ -376,7 +362,7 @@ public sealed class TrainingLoop
 
             // Simple temperature sampling
             var probabilities = new float[logits.Length];
-            var scaledLogits = logits.Select(l => l / temperature).ToArray();
+            var scaledLogits = logits.Select(l => l / sampleTemperature).ToArray(); // Use sampleTemperature parameter
             NumericalFunctions.Softmax(scaledLogits, probabilities);
 
             var nextToken = SampleFromDistribution(probabilities, random);
