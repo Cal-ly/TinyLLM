@@ -365,6 +365,7 @@ public sealed class TrainingLoop
         var tokens = tokenizer.Encode(prompt.AsSpan()).ToList();
         var random = new Random();
 
+        var temperature = context.Configuration.SampleTemperature;
         for (int i = 0; i < 50; i++) // Generate up to 50 tokens
         {
             if (cancellationToken.IsCancellationRequested)
@@ -375,7 +376,7 @@ public sealed class TrainingLoop
 
             // Simple temperature sampling
             var probabilities = new float[logits.Length];
-            var scaledLogits = logits.Select(l => l / 0.8f).ToArray(); // Temperature = 0.8
+            var scaledLogits = logits.Select(l => l / temperature).ToArray();
             NumericalFunctions.Softmax(scaledLogits, probabilities);
 
             var nextToken = SampleFromDistribution(probabilities, random);

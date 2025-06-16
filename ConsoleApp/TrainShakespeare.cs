@@ -17,7 +17,8 @@ public static class TrainShakespeare
         try
         {
             // Setup logging
-            var logger = new ConsoleLogger();
+            var logFile = Path.Combine(Path.GetTempPath(), "tinyllm_training.log");
+            var logger = new ConsoleLogger(logFilePath: logFile);
 
             // Configuration
             // Navigate up from bin/Debug/net9.0 to solution root
@@ -82,10 +83,12 @@ public static class TrainShakespeare
                 CheckpointFrequency = 1,
                 ValidationFrequency = 1,
                 SampleGenerationFrequency = 1,
+                SampleTemperature = 0.7f,
                 MaxValidationBatches = 50,
                 EarlyStoppingPatience = 3,
                 RandomSeed = 42,
-                SamplePrompts = new[] { "To be", "Romeo", "What", "The " }
+                SamplePrompts = new[] { "To be", "Romeo", "What", "The " },
+                MetricsCsvEnabled = false
             };
 
             // Initialize model and optimizer

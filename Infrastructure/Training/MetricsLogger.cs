@@ -22,13 +22,15 @@ public class MetricsLogger
         // Create output directory if it doesn't exist
         Directory.CreateDirectory(config.OutputDirectory);
 
-        // Setup metrics file
-        _outputPath = Path.Combine(config.OutputDirectory, "training_metrics.csv");
-        _fileWriter = new StreamWriter(_outputPath, append: false);
-        _fileWriter.WriteLine("step,epoch,loss,learning_rate,gradient_norm,validation_loss,validation_perplexity");
-        _fileWriter.Flush();
+        if (config.MetricsCsvEnabled)
+        {
+            _outputPath = Path.Combine(config.OutputDirectory, "training_metrics.csv");
+            _fileWriter = new StreamWriter(_outputPath, append: false);
+            _fileWriter.WriteLine("step,epoch,loss,learning_rate,gradient_norm,validation_loss,validation_perplexity");
+            _fileWriter.Flush();
 
-        _logger.LogInformation("Metrics will be saved to: {Path}", _outputPath);
+            _logger.LogInformation("Metrics will be saved to: {Path}", _outputPath);
+        }
     }
 
     public Task LogStepAsync(int step, TrainingStepResult result, CancellationToken cancellationToken)
