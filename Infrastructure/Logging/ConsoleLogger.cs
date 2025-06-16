@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -8,13 +9,23 @@ namespace Infrastructure.Logging;
 /// <summary>
 /// Console logger implementation
 /// </summary>
-public class ConsoleLogger : ILogger
+public class ConsoleLogger : ILogger, IDisposable
 {
     private readonly string _name;
+    private readonly StreamWriter? _logWriter;
 
-    public ConsoleLogger(string name = "")
+    public ConsoleLogger(string name = "", string? logFilePath = null)
     {
         _name = name;
+
+        if (!string.IsNullOrWhiteSpace(logFilePath))
+        {
+            var directory = Path.GetDirectoryName(logFilePath);
+            if (!string.IsNullOrEmpty(directory))
+                Directory.CreateDirectory(directory);
+            _logWriter = new StreamWriter(logFilePath, append: false);
+            _logWriter.AutoFlush = true;
+        }
     }
 
     public void LogInformation(string message, params object[] args)
@@ -70,7 +81,17 @@ public class ConsoleLogger : ILogger
             message = result;
         }
 
-        Console.WriteLine($"[{timestamp}] [{level}] {prefix}{message}");
+        var formatted = $"[{timestamp}] [{level}] {prefix}{message}";
+        Console.WriteLine(formatted);
+        if (_logWriter != null)
+        {
+            _logWriter.WriteLine(formatted);
+        }
+    }
+
+    public void Dispose()
+    {
+        _logWriter?.Dispose();
     }
 }
 
