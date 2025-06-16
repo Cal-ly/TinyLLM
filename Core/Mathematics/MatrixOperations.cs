@@ -3,8 +3,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using ManagedCuda;
-using ManagedCuda.CudaBlas;
+//using ManagedCuda;
+//using ManagedCuda.BasicLinearAlgebra;
+//using ManagedCuda.CudaBlas;
 
 namespace Core.Mathematics;
 /// <summary>
@@ -12,21 +13,21 @@ namespace Core.Mathematics;
 /// </summary>
 public static class MatrixOperations
 {
-    private static readonly bool _cudaAvailable;
+    //private static readonly bool _cudaAvailable;
 
-    static MatrixOperations()
-    {
-        try
-        {
-            _cudaAvailable = CudaContext.GetDeviceCount() > 0;
-        }
-        catch
-        {
-            _cudaAvailable = false;
-        }
-    }
+    //static MatrixOperations()
+    //{
+    //    try
+    //    {
+    //        _cudaAvailable = CudaContext.GetDeviceCount() > 0;
+    //    }
+    //    catch
+    //    {
+    //        _cudaAvailable = false;
+    //    }
+    //}
 
-    public static bool IsCudaAvailable => _cudaAvailable;
+    //public static bool IsCudaAvailable => _cudaAvailable;
 
     /// <summary>
     /// Matrix multiplication: C = A * B
@@ -37,11 +38,11 @@ public static class MatrixOperations
         ReadOnlySpan<float> a, ReadOnlySpan<float> b, Span<float> result,
         int aRows, int aCols, int bCols)
     {
-        if (_cudaAvailable)
-        {
-            MatrixMultiplyCuda(a, b, result, aRows, aCols, bCols);
-            return;
-        }
+        //if (_cudaAvailable)
+        //{
+        //    MatrixMultiplyCuda(a, b, result, aRows, aCols, bCols);
+        //    return;
+        //}
 
         MatrixMultiplyCpu(a, b, result, aRows, aCols, bCols);
     }
@@ -89,46 +90,38 @@ public static class MatrixOperations
         }
     }
 
-    private static void MatrixMultiplyCuda(
-        ReadOnlySpan<float> a, ReadOnlySpan<float> b, Span<float> result,
-        int aRows, int aCols, int bCols)
-    {
-        var context = new CudaContext();
-        var cublas = new CudaBlas();
+    //private static void MatrixMultiplyCuda(
+    //    ReadOnlySpan<float> a, ReadOnlySpan<float> b, Span<float> result,
+    //    int aRows, int aCols, int bCols)
+    //{
+    //    using var context = new CudaContext();
+    //    using var cublas = new CudaBlas();
 
-        try
-        {
-            var devA = new CudaDeviceVariable<float>(aRows * aCols);
-            var devB = new CudaDeviceVariable<float>(aCols * bCols);
-            var devC = new CudaDeviceVariable<float>(aRows * bCols);
+    //    var devA = new CudaDeviceVariable<float>(aRows * aCols);
+    //    var devB = new CudaDeviceVariable<float>(aCols * bCols);
+    //    var devC = new CudaDeviceVariable<float>(aRows * bCols);
 
-            devA.CopyToDevice(a.ToArray());
-            devB.CopyToDevice(b.ToArray());
+    //    devA.CopyToDevice(a.ToArray());
+    //    devB.CopyToDevice(b.ToArray());
 
-            const float alpha = 1.0f;
-            const float beta = 0.0f;
-            cublas.Gemm(Operation.NonTranspose, Operation.NonTranspose,
-                aRows, bCols, aCols,
-                alpha,
-                devA, aRows, // Changed from devA.DevicePointer to devA
-                devB, aCols, // Changed from devB.DevicePointer to devB
-                beta,
-                devC, aRows); // Changed from devC.DevicePointer to devC
+    //    const float alpha = 1.0f;
+    //    const float beta = 0.0f;
+    //    cublas.Gemm(Operation.NonTranspose, Operation.NonTranspose,
+    //        aRows, bCols, aCols,
+    //        alpha,
+    //        devA.DevicePointer, aRows,
+    //        devB.DevicePointer, aCols,
+    //        beta,
+    //        devC.DevicePointer, aRows);
 
-            var hostResult = new float[aRows * bCols];
-            devC.CopyToHost(hostResult);
-            hostResult.CopyTo(result);
+    //    var hostResult = new float[aRows * bCols];
+    //    devC.CopyToHost(hostResult);
+    //    hostResult.CopyTo(result);
 
-            devA.Dispose();
-            devB.Dispose();
-            devC.Dispose();
-        }
-        finally
-        {
-            cublas.Dispose();
-            context.Dispose();
-        }
-    }
+    //    devA.Dispose();
+    //    devB.Dispose();
+    //    devC.Dispose();
+    //}
 
     /// <summary>
     /// Matrix-vector multiplication: y = A * x
