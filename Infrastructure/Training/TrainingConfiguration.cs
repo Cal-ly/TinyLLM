@@ -31,6 +31,7 @@ public class TrainingConfiguration
     public int CheckpointFrequency { get; init; } = 1;
     public int ValidationFrequency { get; init; } = 1;
     public int SampleGenerationFrequency { get; init; } = 1;
+    public float SampleTemperature { get; init; } = 0.7f;
     public int MaxValidationBatches { get; init; } = 100;
 
     // Early stopping
@@ -40,6 +41,7 @@ public class TrainingConfiguration
     public int? RandomSeed { get; init; } = 42;
     public string? ResumeFromCheckpoint { get; init; }
     public string[] SamplePrompts { get; init; } = Array.Empty<string>();
+    public bool MetricsCsvEnabled { get; init; } = false;
 
     public int GetTotalSteps()
     {
