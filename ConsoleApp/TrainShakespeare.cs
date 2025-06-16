@@ -22,7 +22,7 @@ public static class TrainShakespeare
             // Configuration
             // Navigate up from bin/Debug/net9.0 to solution root
             var solutionDir = Path.GetFullPath(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "..", "..", "..", ".."));
-            var dataPath = Path.Combine(solutionDir, "Infrastructure", "Data", "shakespeare1mil.txt");
+            var dataPath = Path.Combine(solutionDir, "Infrastructure", "Data", "shakespeare25k.txt");
             var outputDir = Path.Combine(solutionDir, "Models", "shakespeare", DateTime.Now.ToString("yyyyMMdd_HHmmss"));
 
             // Check if data file exists
